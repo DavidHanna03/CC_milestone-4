@@ -8,15 +8,14 @@ files = glob.glob("*.json")
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = files[0]
 
 # Pub/Sub configuration
-project_id = "coudCompProj"
-subscription_name = "transfer-sub"  # Subscription for transfer topic
-convert_topic_name = "convert"       # Target topic after conversion
+project_id = "cc-project-milestone-1"
+subscription_name = "transfer-sub"
+convert_topic_name = "convert"
 
 # Initialize clients
 subscriber = pubsub_v1.SubscriberClient()
 publisher = pubsub_v1.PublisherClient()
 
-# Resource paths
 subscription_path = subscriber.subscription_path(project_id, subscription_name)
 convert_topic_path = publisher.topic_path(project_id, convert_topic_name)
 
@@ -24,18 +23,12 @@ def convert_units(message):
     try:
         data = json.loads(message.data.decode('utf-8'))
         
-        # Perform conversions if fields exist
         if 'temperature' in data:
-            # Celsius to Fahrenheit: F = (C × 9/5) + 32
             data['temperature'] = round((data['temperature'] * 9/5) + 32, 2)
-            
-        if 'pressure' in data:
-            # kPa to psi: 1 kPa = 0.145038 psi
-            data['pressure'] = round(data['pressure'] * 0.145038, 2)
-            
-        #data['converted_at'] = int(time.time())
         
-        # Publish converted message
+        if 'pressure' in data:
+            data['pressure'] = round(data['pressure'] * 0.145038, 2)
+        
         record = json.dumps(data).encode('utf-8')
         future = publisher.publish(convert_topic_path, record)
         future.result()
@@ -52,7 +45,6 @@ def convert_units(message):
         print(f"Conversion error: {e}")
         message.nack()
 
-# Start listening
 streaming_pull = subscriber.subscribe(subscription_path, callback=convert_units)
 print(f"Listening for messages on {subscription_path}...")
 
